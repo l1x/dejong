@@ -5,28 +5,56 @@
     [clojure.math.combinatorics :as combo])
     (:gen-class))
 
-(defn sierpinski-triangle 
-  [[xa1 ya1 xa2 ya2] [xb1 yb1 xb2 yb2]] 
-  [(/ (+ xa1 xa2) 2) (/ (+ ya1 ya2) 2) (/ (+ xb1 xb2) 2) (/ (+ yb1 yb2)  2)])
+(defn mean [a b] (/ (+ a b) 2)) ; gets the mean of two numbers
 
-(def tria1 '([-400 -400 0 400] [0 400 400 -400] [-400 -400 400 -400]))
-(def tria2 (map #(sierpinski-triangle (first %1) (second %1)) (combo/combinations tria1 2)))
-(def tria3 (sierpinski-triangle [-400 -400 0 200] [-200 -400 0 200]))
+(defn flip [n] (* -1 n)) ;returns the same number with different sign - -> +, + -> -
+
+(defn halve [n] (/ n 2)) ;divides a number by two
+
+(defn s-trian                               ; given a triangle (denoted with 6 integers or 3 coordinates)
+  [[x1 y1 x2 y2 x3 y3]]                     ; retrurns 3 triangles, each are placed close to the edges of 
+  (list [ x1            y1                  ; the original triangle, the lenght of sides are exactly 50% 
+          (mean x1 x2)  (mean y1 y2)        ; of the original triangle
+          (mean x1 x3)  (mean y1 y3)  ]
+
+        [ (mean x1 x3)  (mean y1 y3) 
+          (mean x2 x3)  (mean y2 y3)
+          x3            y3            ]
+
+        [ (mean x1 x2)  (mean y1 y2)
+          x2            y2            
+          (mean x2 x3)  (mean y2 y3)  ] ))
+
+(defn start-trian                                                 ; creates the initial triangle
+  []
+  [ (flip (halve (q/width))) (flip (halve (q/height))) 
+    0                        (halve (q/height))
+    (halve (q/width))        (flip (halve (q/height)))  ])
+
+
+(defn sierpinski-triangle                                         ; generates the Sierpinski triangle in 2D 
+  [init counter]
+  (loop [iter 0 acc (s-trian init)]
+    (if (> iter counter)
+      acc
+      (recur (inc iter) (apply concat (map s-trian acc)))))) 
 
 (defn draw []
+  (q/frame-rate 1)
   (q/background 255)
+  (println (start-trian))
   ; move origin point to centre of the sketch
   ; by default origin is in the left top corner
   (q/with-translation [(/ (q/width) 2) (/ (q/height) 2)]
-    (doseq [ [x1 y1 x2 y2] (lazy-cat tria1 tria2 tria3)]
-    ;         x    y
-    (q/line   x1  (* -1 y1) x2 (* -1 y2) ))))
+    (doseq [ [x1 y1 x2 y2 x3 y3] (sierpinski-triangle (start-trian) 6) ]
+      (q/triangle x1 (flip y1) x2 (flip y2) x3 (flip y3)))))
 
 ; run sketch
 (defn show-window 
   []
   (q/defsketch trigonometry
-    :size [800 800]
+    :settings #(q/smooth 2) 
+    :size [1000 800]
     :draw draw))
 
 (defn -main 
